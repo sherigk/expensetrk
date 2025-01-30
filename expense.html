@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Expense Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f4f4f9;
+      color: #333;
+    }
+    h1 {
+      color: #4CAF50;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+    input[type="text"], input[type="number"], select, input[type="date"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    li {
+      background: #f9f9f9;
+      margin: 5px 0;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .total {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    .actions button {
+      margin-left: 5px;
+      padding: 5px 10px;
+      font-size: 14px;
+    }
+    .actions button.edit {
+      background-color: #ff9800;
+    }
+    .actions button.delete {
+      background-color: #f44336;
+    }
+    .download-button {
+      margin-top: 20px;
+      background-color: #2196F3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Daily Expense Tracker</h1>
+    <form id="expenseForm">
+      <label for="date">Date:</label>
+      <input type="date" id="date" required>
+
+      <label for="description">Description:</label>
+      <input type="text" id="description" placeholder="Enter expense description" required>
+
+      <label for="category">Category:</label>
+      <select id="category" required>
+        <option value="Food">Food</option>
+        <option value="Transport">Transport</option>
+        <option value="Entertainment">Entertainment</option>
+        <option value="Utilities">Utilities</option>
+        <option value="Other">Other</option>
+      </select>
+
+      <label for="amount">Amount:</label>
+      <input type="number" id="amount" placeholder="Enter amount" required>
+
+      <button type="submit">Add Expense</button>
+    </form>
+
+    <h2>Expenses</h2>
+    <ul id="expenseList"></ul>
+
+    <div class="total">Total: $<span id="totalAmount">0</span></div>
+
+    <!-- Download Button -->
+    <button class="download-button" onclick="downloadCSV()">Download Expenses as CSV</button>
+  </div>
+
+  <script>
+    // JavaScript to handle adding, editing, deleting expenses, and calculating the total
+    const expenseForm = document.getElementById('expenseForm');
+    const expenseList = document.getElementById('expenseList');
+    const totalAmount = document.getElementById('totalAmount');
+
+    let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+
+    // Load expenses from local storage on page load
+    window.addEventListener('load', () => {
+      updateUI();
+    });
+
+    expenseForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      // Get input values
+      const date = document.getElementById('date').value;
+      const description = document.getElementById('description').value;
+      const category = document.getElementById('category').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+
+      // Add expense to the list
+      if (date && description && category && amount) {
+        const expense = { date, description, category, amount };
+        expenses.push(expense);
+
+        // Save to local storage
+        localStorage.setItem('expenses', JSON.stringify(expenses));
+
+        // Clear the form
+        expenseForm.reset();
+
+        // Update the UI
+        updateUI();
+      }
+    });
+
+    function updateUI() {
+      // Clear the list
+      expenseList.innerHTML = '';
+
+      // Calculate total
+      let total = 0;
+
+      // Add each expense to the list
+      expenses.forEach((expense, index) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div>
+            <span><strong>${expense.date}</strong> - ${expense.description} (${expense.category})</span>
+            <span>$${expense.amount.toFixed(2)}</span>
+          </div>
+          <div class="actions">
+            <button class="edit" onclick="editExpense(${index})">Edit</button>
+            <button class="delete" onclick="deleteExpense(${index})">Delete</button>
+          </div>
+        `;
+        expenseList.appendChild(li);
+
+        total += expense.amount;
+      });
+
+      // Update the total amount
+      totalAmount.textContent = total.toFixed(2);
+    }
+
+    function deleteExpense(index) {
+      // Remove the expense from the array
+      expenses.splice(index, 1);
+
+      // Save to local storage
+      localStorage.setItem('expenses', JSON.stringify(expenses));
+
+      // Update the UI
+      updateUI();
+    }
+
+    function editExpense(index) {
+      // Get the expense to edit
+      const expense = expenses[index];
+
+      // Populate the form with the expense details
+      document.getElementById('date').value = expense.date;
+      document.getElementById('description').value = expense.description;
+      document.getElementById('category').value = expense.category;
+      document.getElementById('amount').value = expense.amount;
+
+      // Remove the expense from the array
+      expenses.splice(index, 1);
+
+      // Save to local storage
+      localStorage.setItem('expenses', JSON.stringify(expenses));
+
+      // Update the UI
+      updateUI();
+    }
+
+    // Function to download expenses as CSV
+    function downloadCSV() {
+      // Create CSV content
+      let csvContent = "Date,Description,Category,Amount\n"; // Header row
+      expenses.forEach((expense) => {
+        csvContent += `${expense.date},${expense.description},${expense.category},${expense.amount}\n`;
+      });
+
+      // Create a Blob with the CSV data
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+
+      // Create a link element to trigger the download
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'expenses.csv';
+      link.style.visibility = 'hidden';
+
+      // Append the link to the body and trigger the download
+      document.body.appendChild(link);
+      link.click();
+
+      // Remove the link from the DOM
+      document.body.removeChild(link);
+    }
+  </script>
+</body>
+</html>
